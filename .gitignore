@@ -1,0 +1,17 @@
+dist/
+node_modules/
+
+# env files — never commit real secrets
+.env*
+!.env.example
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Temp
+*.log
+/tmp/
