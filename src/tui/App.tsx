@@ -5,6 +5,7 @@ import { FileList } from "./FileList.js";
 import { KeyTable } from "./KeyTable.js";
 import { StatusBar } from "./StatusBar.js";
 import { DiffView } from "./DiffView.js";
+import { HelpOverlay } from "./HelpOverlay.js";
 import { InlineForm } from "./InlineForm.js";
 import { readEnvFile, addKey, updateKey, removeKey } from "../core/parser/index.js";
 import { decryptValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
@@ -20,7 +21,8 @@ type Mode =
   | { type: "confirm-add-encrypt"; keyName: string; value: string }
   | { type: "confirm-delete"; key: EnvKey }
   | { type: "confirm-encrypt" }
-  | { type: "diff" };
+  | { type: "diff" }
+  | { type: "help" };
 
 export function App({ files }: Props) {
   const { exit } = useApp();
@@ -62,6 +64,7 @@ export function App({ files }: Props) {
     if (mode.type !== "normal") return;
 
     if (input === "q" || key.escape) { exit(); return; }
+    if (input === "?") { setMode({ type: "help" }); return; }
 
     if (key.tab) {
       setFocus((f) => f === "files" ? "keys" : "files");
@@ -306,6 +309,10 @@ export function App({ files }: Props) {
         />}
       />
     );
+  }
+
+  if (mode.type === "help") {
+    return <HelpOverlay onClose={() => setMode({ type: "normal" })} />;
   }
 
   if (mode.type === "diff") {

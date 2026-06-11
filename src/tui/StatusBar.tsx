@@ -6,8 +6,8 @@ type Props = {
   focus: "files" | "keys";
 };
 
-const FILE_HINTS = "↑↓ navigate  tab switch panel  q quit";
-const KEY_HINTS  = "↑↓ navigate  tab switch panel  y copy  r reveal  a add  D delete  d diff  q quit";
+const FILE_HINTS = "↑↓ navigate  tab switch panel  ? help  q quit";
+const KEY_HINTS  = "↑↓ navigate  tab switch  enter edit  y copy  r reveal  a add  D del  d diff  ? help  q quit";
 
 export function StatusBar({ message, focus }: Props) {
   return (

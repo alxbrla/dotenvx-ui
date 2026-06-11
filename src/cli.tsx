@@ -2,6 +2,7 @@ import React from "react";
 import { render } from "ink";
 import { scan } from "./core/scanner.js";
 import { App } from "./tui/App.js";
+import { ErrorBoundary } from "./tui/ErrorBoundary.js";
 import { createRequire } from "node:module";
 const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 
@@ -40,7 +41,7 @@ function runTUI() {
     console.error("No .env files found in this directory.");
     process.exit(1);
   }
-  render(<App files={files} />);
+  render(<ErrorBoundary><App files={files} /></ErrorBoundary>);
 }
 
 function runWebUI() {
