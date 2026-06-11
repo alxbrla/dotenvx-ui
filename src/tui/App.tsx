@@ -8,7 +8,7 @@ import { DiffView } from "./DiffView.js";
 import { HelpOverlay } from "./HelpOverlay.js";
 import { InlineForm } from "./InlineForm.js";
 import { readEnvFile, addKey, updateKey, removeKey } from "../core/parser/index.js";
-import { decryptValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
+import { decryptValue, decryptAllValues, isEncryptedValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
 import type { EnvFile, EnvKey } from "../core/types.js";
 
 type Props = { files: EnvFile[] };
@@ -98,11 +98,12 @@ export function App({ files }: Props) {
         setRevealed(new Map());
         return;
       }
+      const decrypted = keys.some((e) => e.encrypted) ? decryptAllValues(selectedFile.path) : {};
       const next = new Map<string, string>();
       for (const entry of keys) {
         if (entry.encrypted) {
-          const plain = decryptValue(entry.value, selectedFile.path);
-          if (plain === null) { flash("🔒 Private key not found — cannot reveal all"); return; }
+          const plain = decrypted[entry.key];
+          if (plain === undefined || isEncryptedValue(plain)) { flash("🔒 Private key not found — cannot reveal all"); return; }
           next.set(entry.key, plain);
         } else {
           next.set(entry.key, entry.value);

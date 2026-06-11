@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Text, useInput, useStdin } from "ink";
+import { useTerminalRows, scrollWindow } from "./useTerminalRows.js";
 import type { EnvFile, EnvKey } from "../core/types.js";
 
 type Props = {
@@ -22,11 +23,18 @@ function maskValue(k: EnvKey, revealed: Map<string, string>): string {
 
 export function KeyTable({ file, keys, selectedIndex, focused, revealed, onSelect }: Props) {
   const { isRawModeSupported } = useStdin();
+  const termRows = useTerminalRows();
   useInput((_, key) => {
     if (!focused) return;
     if (key.upArrow) onSelect(Math.max(0, selectedIndex - 1));
     if (key.downArrow) onSelect(Math.min(keys.length - 1, selectedIndex + 1));
   }, { isActive: isRawModeSupported });
+
+  // Rows around the list: app header, file header, status bar (border + text),
+  // inline form row, and the two "more" indicators.
+  const maxVisible = Math.max(3, termRows - 7);
+  const { start, end, above, below } = scrollWindow(keys.length, selectedIndex, maxVisible);
+  const visibleKeys = keys.slice(start, end);
 
   const encBadge = file.encrypted
     ? <Text color="yellow"> encrypted</Text>
@@ -47,23 +55,36 @@ export function KeyTable({ file, keys, selectedIndex, focused, revealed, onSelec
           <Text dimColor>No keys found. Press <Text bold>a</Text> to add one.</Text>
         </Box>
       ) : (
-        keys.map((k, idx) => {
-          const selected = idx === selectedIndex;
-          const value = maskValue(k, revealed);
-          const lockIcon = k.encrypted && !revealed.has(k.key) ? " 🔒" : "";
-          return (
-            <Box key={k.key} paddingX={1}>
-              <Text
-                backgroundColor={selected && focused ? "blue" : undefined}
-                color={selected && focused ? "white" : selected ? "cyan" : undefined}
-              >
-                {k.key.padEnd(24)}
-                <Text dimColor={!selected}>{value}</Text>
-                {lockIcon}
-              </Text>
+        <>
+          {above > 0 && (
+            <Box paddingX={1}>
+              <Text dimColor>↑ {above} more</Text>
             </Box>
-          );
-        })
+          )}
+          {visibleKeys.map((k, i) => {
+            const idx = start + i;
+            const selected = idx === selectedIndex;
+            const value = maskValue(k, revealed);
+            const lockIcon = k.encrypted && !revealed.has(k.key) ? " 🔒" : "";
+            return (
+              <Box key={k.key} paddingX={1}>
+                <Text
+                  backgroundColor={selected && focused ? "blue" : undefined}
+                  color={selected && focused ? "white" : selected ? "cyan" : undefined}
+                >
+                  {k.key.padEnd(24)}
+                  <Text dimColor={!selected}>{value}</Text>
+                  {lockIcon}
+                </Text>
+              </Box>
+            );
+          })}
+          {below > 0 && (
+            <Box paddingX={1}>
+              <Text dimColor>↓ {below} more</Text>
+            </Box>
+          )}
+        </>
       )}
     </Box>
   );

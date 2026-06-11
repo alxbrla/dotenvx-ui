@@ -8,6 +8,7 @@ import {
   getPublicKey,
   getPrivateKey,
   decryptValue,
+  decryptAllValues,
   encryptFile,
   decryptFile,
 } from "../core/dotenvx.js";
@@ -117,6 +118,39 @@ test("decryptFile: decrypts all keys back to plaintext", () => {
   } finally {
     cleanup(dir);
   }
+});
+
+// --- decryptAllValues ---
+
+test("decryptAllValues: decrypts every encrypted value in one pass", () => {
+  const { dir, file } = fixture("FOO=bar\nBAZ=qux\nPLAIN=visible\n");
+  try {
+    encryptFile(file);
+
+    const all = decryptAllValues(file);
+    assert.equal(all["FOO"], "bar");
+    assert.equal(all["BAZ"], "qux");
+    assert.equal(all["PLAIN"], "visible");
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("decryptAllValues: keeps values encrypted when no private key available", () => {
+  const { dir, file } = fixture("FOO=bar\n");
+  try {
+    encryptFile(file);
+    rmSync(join(dir, ".env.keys"));
+
+    const all = decryptAllValues(file);
+    assert.ok(isEncryptedValue(all["FOO"]!), "value should stay encrypted without a key");
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("decryptAllValues: returns empty object for missing file", () => {
+  assert.deepEqual(decryptAllValues("/nonexistent/.env"), {});
 });
 
 // --- getPublicKey / getPrivateKey ---

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Box, Text, useInput, useStdin } from "ink";
 import { readEnvFile } from "../core/parser/index.js";
-import { decryptValue } from "../core/dotenvx.js";
+import { decryptAllValues, isEncryptedValue } from "../core/dotenvx.js";
+import { useTerminalRows, scrollWindow } from "./useTerminalRows.js";
 import type { EnvFile, EnvKey } from "../core/types.js";
 
 type Props = {
@@ -20,13 +21,17 @@ type DiffRow = {
 };
 
 const COL_VAL = 26;
+const PICKER_MAX = 5;
 
 function buildDisplayMap(keys: EnvKey[], filePath: string): Map<string, string> {
+  // Single-pass decryption — decryptValue per key re-parses the whole file
+  // each call and locks up the terminal on large files.
+  const decrypted = keys.some((k) => k.encrypted) ? decryptAllValues(filePath) : {};
   const out = new Map<string, string>();
   for (const k of keys) {
     if (k.encrypted) {
-      const plain = decryptValue(k.value, filePath);
-      out.set(k.key, plain !== null ? plain : "🔒");
+      const plain = decrypted[k.key];
+      out.set(k.key, plain !== undefined && !isEncryptedValue(plain) ? plain : "🔒");
     } else {
       out.set(k.key, k.value);
     }
@@ -64,21 +69,45 @@ function safeRead(file: EnvFile): EnvKey[] {
 
 export function DiffView({ left, files, onClose }: Props) {
   const { isRawModeSupported } = useStdin();
+  const termRows = useTerminalRows();
   const others = files.filter((f) => f.path !== left.path);
 
   const [pickerIndex, setPickerIndex] = useState(0);
+  const [rowScroll, setRowScroll] = useState(0);
 
   const rightFile = others[pickerIndex] ?? null;
+  const rightPath = rightFile?.path ?? null;
 
-  const leftKeys = safeRead(left);
-  const rightKeys = rightFile ? safeRead(rightFile) : [];
-  const leftMap = buildDisplayMap(leftKeys, left.path);
-  const rightMap = rightFile ? buildDisplayMap(rightKeys, rightFile.path) : new Map<string, string>();
-  const rows = rightFile ? buildRows(leftMap, rightMap) : [];
+  const rows = useMemo(() => {
+    if (!rightFile) return [];
+    const leftMap = buildDisplayMap(safeRead(left), left.path);
+    const rightMap = buildDisplayMap(safeRead(rightFile), rightFile.path);
+    return buildRows(leftMap, rightMap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [left.path, rightPath]);
+
+  // Picker viewport
+  const pickerVisible = Math.min(others.length, PICKER_MAX);
+  const picker = scrollWindow(others.length, pickerIndex, PICKER_MAX);
+
+  // Rows around the diff table: header, picker header + items + border,
+  // column header + border, status bar, and the scroll indicators.
+  const chrome = 9 + pickerVisible + (picker.above > 0 || picker.below > 0 ? 2 : 0);
+  const maxRows = Math.max(3, termRows - chrome);
+  const maxScroll = Math.max(0, rows.length - maxRows);
+  const scroll = Math.min(rowScroll, maxScroll);
+  const visibleRows = rows.slice(scroll, scroll + maxRows);
+  const rowsAbove = scroll;
+  const rowsBelow = rows.length - (scroll + visibleRows.length);
+
   useInput((input, key) => {
     if (key.escape || input === "q") { onClose(); return; }
-    if (key.upArrow) setPickerIndex((i) => Math.max(0, i - 1));
-    if (key.downArrow) setPickerIndex((i) => Math.min(others.length - 1, i + 1));
+    if (key.upArrow) { setPickerIndex((i) => Math.max(0, i - 1)); setRowScroll(0); return; }
+    if (key.downArrow) { setPickerIndex((i) => Math.min(others.length - 1, i + 1)); setRowScroll(0); return; }
+    if (input === "k") setRowScroll(Math.max(0, scroll - 1));
+    if (input === "j") setRowScroll(Math.min(maxScroll, scroll + 1));
+    if (key.pageUp) setRowScroll(Math.max(0, scroll - maxRows));
+    if (key.pageDown) setRowScroll(Math.min(maxScroll, scroll + maxRows));
   }, { isActive: isRawModeSupported });
 
   const leftName = trunc(left.relativePath, COL_VAL);
@@ -97,8 +126,9 @@ export function DiffView({ left, files, onClose }: Props) {
       <Box flexDirection="column" paddingX={1}
         borderStyle="single" borderBottom borderTop={false} borderLeft={false} borderRight={false}>
         <Text bold dimColor>compare with</Text>
-        {others.map((f, i) => {
-          const selected = i === pickerIndex;
+        {picker.above > 0 && <Text dimColor>  ↑ {picker.above} more</Text>}
+        {others.slice(picker.start, picker.end).map((f, i) => {
+          const selected = picker.start + i === pickerIndex;
           return (
             <Box key={f.path}>
               <Text
@@ -110,6 +140,7 @@ export function DiffView({ left, files, onClose }: Props) {
             </Box>
           );
         })}
+        {picker.below > 0 && <Text dimColor>  ↓ {picker.below} more</Text>}
         {others.length === 0 && <Text dimColor>  no other files</Text>}
       </Box>
 
@@ -122,7 +153,9 @@ export function DiffView({ left, files, onClose }: Props) {
           <Text bold>{rightName}</Text>
         </Box>
         {/* Rows */}
-        {rows.map((row) => <DiffRow key={row.key} row={row} />)}
+        {rowsAbove > 0 && <Text dimColor>↑ {rowsAbove} more</Text>}
+        {visibleRows.map((row) => <DiffRow key={row.key} row={row} />)}
+        {rowsBelow > 0 && <Text dimColor>↓ {rowsBelow} more</Text>}
         {rows.length === 0 && (
           <Box marginTop={1}><Text dimColor>Select a file to compare.</Text></Box>
         )}
@@ -130,7 +163,7 @@ export function DiffView({ left, files, onClose }: Props) {
 
       {/* Status bar */}
       <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
-        <Text dimColor>↑↓ pick file  esc close    </Text>
+        <Text dimColor>↑↓ pick file  j/k scroll  esc close    </Text>
         <Text color="green">● same</Text>
       </Box>
 
