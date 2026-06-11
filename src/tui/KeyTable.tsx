@@ -7,14 +7,14 @@ type Props = {
   keys: EnvKey[];
   selectedIndex: number;
   focused: boolean;
-  revealed: Set<string>;
+  revealed: Map<string, string>;
   onSelect: (index: number) => void;
 };
 
 const SECRET_PATTERN = /secret|password|token|key|private|api_?key/i;
 
-function maskValue(k: EnvKey, revealed: Set<string>): string {
-  if (revealed.has(k.key)) return k.value;
+function maskValue(k: EnvKey, revealed: Map<string, string>): string {
+  if (revealed.has(k.key)) return revealed.get(k.key)!;
   if (k.encrypted) return "••••••••••••••";
   if (SECRET_PATTERN.test(k.key)) return "••••••••";
   return k.value.length > 48 ? k.value.slice(0, 48) + "…" : k.value;

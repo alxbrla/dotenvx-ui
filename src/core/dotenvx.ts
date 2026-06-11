@@ -77,6 +77,15 @@ export function encryptFile(envFilePath: string): void {
   }
 }
 
+// Encrypts a single key value in the file.
+export function encryptKey(envFilePath: string, keyName: string, plainValue: string): void {
+  dotenvx.set(keyName, plainValue, {
+    path: envFilePath,
+    encrypt: true,
+    logLevel: "error",
+  });
+}
+
 // Decrypts every encrypted key in the file back to plain text.
 export function decryptFile(envFilePath: string): void {
   const keys = readEnvFile(envFilePath);
