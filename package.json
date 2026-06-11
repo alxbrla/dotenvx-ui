@@ -4,6 +4,12 @@
   "description": "Terminal and web UI for managing dotenvx environment files",
   "author": "Alexandru Burla <alexandru.burla@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alxbrla/dotenvx-ui.git"
+  },
+  "homepage": "https://github.com/alxbrla/dotenvx-ui",
+  "bugs": "https://github.com/alxbrla/dotenvx-ui/issues",
   "type": "module",
   "bin": {
     "dotenvx-ui": "./dist/cli.js"
