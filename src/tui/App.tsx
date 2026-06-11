@@ -16,6 +16,7 @@ type Mode =
   | { type: "edit"; key: EnvKey }
   | { type: "add-key" }
   | { type: "add-value"; keyName: string }
+  | { type: "confirm-add-encrypt"; keyName: string; value: string }
   | { type: "confirm-delete"; key: EnvKey }
   | { type: "confirm-encrypt" };
 
@@ -188,6 +189,7 @@ export function App({ files }: Props) {
         statusMsg={statusMsg} focus2={focus}
         extra={
           <InlineForm
+            key="add-key"
             label="New key name"
             onSubmit={(keyName) => {
               if (!keyName.trim()) { setMode({ type: "normal" }); return; }
@@ -208,17 +210,41 @@ export function App({ files }: Props) {
         statusMsg={statusMsg} focus2={focus}
         extra={
           <InlineForm
+            key="add-value"
             label={`Value for ${keyName}`}
             onSubmit={(val) => {
-              addKey(selectedFile.path, keyName, val);
-              refreshKeys();
-              setKeyIndex(keys.length);
-              setMode({ type: "normal" });
-              flash(`Added ${keyName}`);
+              if (selectedFile.encrypted) {
+                setMode({ type: "confirm-add-encrypt", keyName, value: val });
+              } else {
+                addKey(selectedFile.path, keyName, val);
+                refreshKeys();
+                setKeyIndex(keys.length);
+                setMode({ type: "normal" });
+                flash(`Added ${keyName}`);
+              }
             }}
             onCancel={() => setMode({ type: "normal" })}
           />
         }
+      />
+    );
+  }
+
+  if (mode.type === "confirm-add-encrypt") {
+    const { keyName, value: newVal } = mode;
+    const commit = (encrypt: boolean) => {
+      addKey(selectedFile.path, keyName, newVal);
+      if (encrypt) encryptKey(selectedFile.path, keyName, newVal);
+      refreshKeys();
+      setKeyIndex(keys.length);
+      setMode({ type: "normal" });
+      flash(`Added ${keyName}${encrypt ? " (encrypted)" : ""}`);
+    };
+    return (
+      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
+        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
+        statusMsg={statusMsg} focus2={focus}
+        extra={<ConfirmAddEncrypt keyName={keyName} onEncrypt={() => commit(true)} onPlain={() => commit(false)} onCancel={() => setMode({ type: "normal" })} />}
       />
     );
   }
@@ -363,6 +389,29 @@ function ConfirmEncrypt({ decrypt, fileName, onConfirm, onCancel }: ConfirmEncry
     <Box paddingX={1}>
       <Text color={color}>{action} <Text bold>{fileName}</Text>? </Text>
       <Text dimColor>y confirm  any other key cancel</Text>
+    </Box>
+  );
+}
+
+type ConfirmAddEncryptProps = {
+  keyName: string;
+  onEncrypt: () => void;
+  onPlain: () => void;
+  onCancel: () => void;
+};
+
+function ConfirmAddEncrypt({ keyName, onEncrypt, onPlain, onCancel }: ConfirmAddEncryptProps) {
+  const { isRawModeSupported } = useStdin();
+  useInput((input, key) => {
+    if (key.escape) { onCancel(); return; }
+    if (input === "y" || input === "Y") { onEncrypt(); return; }
+    if (input === "n" || input === "N" || key.return) { onPlain(); return; }
+  }, { isActive: isRawModeSupported });
+
+  return (
+    <Box paddingX={1}>
+      <Text>Encrypt <Text bold>{keyName}</Text>? </Text>
+      <Text dimColor>y encrypt  n plain  esc cancel</Text>
     </Box>
   );
 }

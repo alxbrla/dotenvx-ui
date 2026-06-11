@@ -38,7 +38,14 @@ export function writeEnvFile(filePath: string, keys: EnvKey[]): void {
     written.add(entry.key);
     const leadingComments = getLeadingCommentLines(entry.lines);
     outLines.push(...leadingComments);
-    outLines.push(serializeKeyValue(entry.key, update.value));
+
+    if (update.value === entry.value) {
+      // Value unchanged — emit the original raw line to preserve quoting/formatting
+      const keyLines = entry.lines.filter((l) => !l.trimStart().startsWith("#"));
+      outLines.push(...keyLines);
+    } else {
+      outLines.push(serializeKeyValue(entry.key, update.value));
+    }
   }
 
   // Append keys not present in the original file
