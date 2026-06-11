@@ -4,6 +4,7 @@ import clipboard from "clipboardy";
 import { FileList } from "./FileList.js";
 import { KeyTable } from "./KeyTable.js";
 import { StatusBar } from "./StatusBar.js";
+import { DiffView } from "./DiffView.js";
 import { InlineForm } from "./InlineForm.js";
 import { readEnvFile, addKey, updateKey, removeKey } from "../core/parser/index.js";
 import { decryptValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
@@ -18,7 +19,8 @@ type Mode =
   | { type: "add-value"; keyName: string }
   | { type: "confirm-add-encrypt"; keyName: string; value: string }
   | { type: "confirm-delete"; key: EnvKey }
-  | { type: "confirm-encrypt" };
+  | { type: "confirm-encrypt" }
+  | { type: "diff" };
 
 export function App({ files }: Props) {
   const { exit } = useApp();
@@ -142,6 +144,12 @@ export function App({ files }: Props) {
     if (input === "D") {
       if (!k) return;
       setMode({ type: "confirm-delete", key: k });
+      return;
+    }
+
+    // Diff
+    if (input === "d") {
+      setMode({ type: "diff" });
       return;
     }
 
@@ -296,6 +304,16 @@ export function App({ files }: Props) {
           }}
           onCancel={() => setMode({ type: "normal" })}
         />}
+      />
+    );
+  }
+
+  if (mode.type === "diff") {
+    return (
+      <DiffView
+        left={selectedFile}
+        files={files}
+        onClose={() => setMode({ type: "normal" })}
       />
     );
   }
