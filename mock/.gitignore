@@ -1,0 +1,4 @@
+# This folder contains dummy values only — safe to commit.
+# Re-include .env* files that the root .gitignore excludes.
+!.env*
+!**/.env*

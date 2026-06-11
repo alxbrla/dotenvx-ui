@@ -61,6 +61,19 @@ test("detectRoot: walks up to find .git", () => {
 
 // --- scanForEnvFiles ---
 
+test("scanForEnvFiles: skips .env.keys", () => {
+  const dir = fixture();
+  try {
+    writeFileSync(join(dir, ".env"), "FOO=bar");
+    writeFileSync(join(dir, ".env.keys"), "DOTENV_PRIVATE_KEY=abc");
+    const found = scanForEnvFiles(dir);
+    assert.equal(found.length, 1);
+    assert.ok(!found.some((f) => f.endsWith(".env.keys")));
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("scanForEnvFiles: finds .env and .env.* files", () => {
   const dir = fixture();
   try {

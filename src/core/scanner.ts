@@ -57,6 +57,7 @@ export function scanForEnvFiles(root: string): string[] {
 }
 
 function isEnvFile(name: string): boolean {
+  if (name === ".env.keys") return false;
   return name === ".env" || name.startsWith(".env.");
 }
 

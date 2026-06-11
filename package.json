@@ -15,7 +15,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "test": "pnpm build && node --import tsx/esm --test 'src/test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && tsc --noEmit && node --import tsx/esm --test 'src/test/**/*.test.ts'",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
