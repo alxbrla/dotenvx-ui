@@ -61,8 +61,6 @@ export function App({ files }: Props) {
   }
 
   useInput((input, key) => {
-    if (mode.type !== "normal") return;
-
     if (input === "q" || key.escape) { exit(); return; }
     if (input === "?") { setMode({ type: "help" }); return; }
 
@@ -171,7 +169,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={
           <InlineForm
             label={`Edit ${editing.key}`}
@@ -198,7 +196,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={
           <InlineForm
             key="add-key"
@@ -219,7 +217,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={
           <InlineForm
             key="add-value"
@@ -255,7 +253,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={<ConfirmAddEncrypt keyName={keyName} onEncrypt={() => commit(true)} onPlain={() => commit(false)} onCancel={() => setMode({ type: "normal" })} />}
       />
     );
@@ -266,7 +264,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={<ConfirmDelete keyName={k.key}
           onConfirm={() => {
             removeKey(selectedFile.path, k.key);
@@ -286,7 +284,7 @@ export function App({ files }: Props) {
     return (
       <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
         focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus}
+        statusMsg={statusMsg} focus2={focus} interactive={false}
         extra={<ConfirmEncrypt
           decrypt={isEncrypted}
           fileName={selectedFile.relativePath}
@@ -329,7 +327,7 @@ export function App({ files }: Props) {
   return (
     <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
       focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-      statusMsg={statusMsg} focus2={focus}
+      statusMsg={statusMsg} focus2={focus} interactive={true}
     />
   );
 }
@@ -345,6 +343,7 @@ type LayoutProps = {
   keyIndex: number;
   focus: Focus;
   focus2: Focus;
+  interactive: boolean;
   revealed: Map<string, string>;
   onSelectFile: (i: number) => void;
   onSelectKey: (i: number) => void;
@@ -352,7 +351,7 @@ type LayoutProps = {
   extra?: React.ReactNode;
 };
 
-function Layout({ files, fileIndex, keys, keyIndex, focus, revealed,
+function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed,
   onSelectFile, onSelectKey, statusMsg, extra }: LayoutProps) {
   const selectedFile = files[fileIndex]!;
   const encCount = files.filter((f) => f.encrypted).length;
@@ -364,9 +363,9 @@ function Layout({ files, fileIndex, keys, keyIndex, focus, revealed,
         <Text dimColor>  {selectedFile.relativePath}  ·  {files.length} files  ·  {encCount} enc</Text>
       </Box>
       <Box flexGrow={1}>
-        <FileList files={files} selectedIndex={fileIndex} focused={focus === "files"} onSelect={onSelectFile} />
+        <FileList files={files} selectedIndex={fileIndex} focused={focus === "files"} interactive={interactive} onSelect={onSelectFile} />
         <KeyTable file={selectedFile} keys={keys} selectedIndex={keyIndex}
-          focused={focus === "keys"} revealed={revealed} onSelect={onSelectKey} />
+          focused={focus === "keys"} interactive={interactive} revealed={revealed} onSelect={onSelectKey} />
       </Box>
       {extra}
       <StatusBar focus={focus} message={statusMsg} />

@@ -6,16 +6,17 @@ type Props = {
   files: EnvFile[];
   selectedIndex: number;
   focused: boolean;
+  interactive: boolean;
   onSelect: (index: number) => void;
 };
 
-export function FileList({ files, selectedIndex, focused, onSelect }: Props) {
+export function FileList({ files, selectedIndex, focused, interactive, onSelect }: Props) {
   const { isRawModeSupported } = useStdin();
   useInput((_, key) => {
     if (!focused) return;
     if (key.upArrow) onSelect(Math.max(0, selectedIndex - 1));
     if (key.downArrow) onSelect(Math.min(files.length - 1, selectedIndex + 1));
-  }, { isActive: isRawModeSupported });
+  }, { isActive: isRawModeSupported && interactive });
 
   const byPkg = Map.groupBy(files, (f) => f.package);
 

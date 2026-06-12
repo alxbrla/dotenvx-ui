@@ -8,6 +8,7 @@ type Props = {
   keys: EnvKey[];
   selectedIndex: number;
   focused: boolean;
+  interactive: boolean;
   revealed: Map<string, string>;
   onSelect: (index: number) => void;
 };
@@ -21,14 +22,14 @@ function maskValue(k: EnvKey, revealed: Map<string, string>): string {
   return k.value.length > 48 ? k.value.slice(0, 48) + "…" : k.value;
 }
 
-export function KeyTable({ file, keys, selectedIndex, focused, revealed, onSelect }: Props) {
+export function KeyTable({ file, keys, selectedIndex, focused, interactive, revealed, onSelect }: Props) {
   const { isRawModeSupported } = useStdin();
   const termRows = useTerminalRows();
   useInput((_, key) => {
     if (!focused) return;
     if (key.upArrow) onSelect(Math.max(0, selectedIndex - 1));
     if (key.downArrow) onSelect(Math.min(keys.length - 1, selectedIndex + 1));
-  }, { isActive: isRawModeSupported });
+  }, { isActive: isRawModeSupported && interactive });
 
   // Rows around the list: app header, file header, status bar (border + text),
   // inline form row, and the two "more" indicators.
