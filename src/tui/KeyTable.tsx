@@ -43,6 +43,8 @@ export function KeyTable({ file, keys, selectedIndex, focused, interactive, reve
   const { start, end, above, below } = scrollWindow(keys.length, selectedIndex, maxVisible);
   const visibleKeys = keys.slice(start, end);
 
+  const keyColWidth = Math.min(48, Math.max(16, ...keys.map((k) => k.key.length))) + 2;
+
   const encBadge = file.encrypted
     ? <Text color="yellow"> encrypted</Text>
     : <Text dimColor> plain</Text>;
@@ -79,7 +81,7 @@ export function KeyTable({ file, keys, selectedIndex, focused, interactive, reve
                   backgroundColor={selected && focused ? "blue" : undefined}
                   color={selected && focused ? "white" : selected ? "cyan" : undefined}
                 >
-                  {k.key.padEnd(24)}
+                  {k.key.padEnd(keyColWidth)}
                   <Text dimColor={!selected}>{value}</Text>
                   {lockIcon}
                 </Text>

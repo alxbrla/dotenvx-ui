@@ -359,9 +359,8 @@ function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed
   const termRows = useTerminalRows();
   const termCols = useTerminalCols();
 
-  // Fixed chrome: app header (1) + status bar (2) + preview bar (2) = 5.
-  // KeyTable gets the remaining rows so it never overflows.
-  const listRows = Math.max(3, termRows - 5);
+  // Fixed chrome: app header (1) + status bar (2) + preview bar (2, when visible) = 5 or 3.
+  const listRows = Math.max(3, termRows - (extra ? 3 : 5));
 
   return (
     <Box flexDirection="column" height={termRows}>
@@ -376,7 +375,7 @@ function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed
           maxRows={listRows} />
       </Box>
       {extra}
-      <ValuePreview keys={keys} keyIndex={keyIndex} focus={focus} revealed={revealed} width={termCols} />
+      {!extra && <ValuePreview keys={keys} keyIndex={keyIndex} focus={focus} revealed={revealed} width={termCols} />}
       <StatusBar focus={focus} message={statusMsg} />
     </Box>
   );
