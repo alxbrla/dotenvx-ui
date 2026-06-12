@@ -41,7 +41,7 @@ function runTUI() {
     console.error("No .env files found in this directory.");
     process.exit(1);
   }
-  render(<ErrorBoundary><App files={files} /></ErrorBoundary>);
+  render(<ErrorBoundary><App files={files} /></ErrorBoundary>, { alternateScreen: true });
 }
 
 function runWebUI() {
