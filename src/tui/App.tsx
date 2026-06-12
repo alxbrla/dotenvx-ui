@@ -9,6 +9,7 @@ import { HelpOverlay } from "./HelpOverlay.js";
 import { InlineForm } from "./InlineForm.js";
 import { readEnvFile, addKey, updateKey, removeKey } from "../core/parser/index.js";
 import { decryptValue, decryptAllValues, isEncryptedValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
+import { useTerminalCols, useTerminalRows } from "./useTerminalRows.js";
 import type { EnvFile, EnvKey } from "../core/types.js";
 
 type Props = { files: EnvFile[] };
@@ -355,20 +356,62 @@ function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed
   onSelectFile, onSelectKey, statusMsg, extra }: LayoutProps) {
   const selectedFile = files[fileIndex]!;
   const encCount = files.filter((f) => f.encrypted).length;
+  const termRows = useTerminalRows();
+  const termCols = useTerminalCols();
+
+  // Fixed chrome: app header (1) + status bar (2) + preview bar (2) = 5.
+  // KeyTable gets the remaining rows so it never overflows.
+  const listRows = Math.max(3, termRows - 5);
 
   return (
-    <Box flexDirection="column" height="100%">
+    <Box flexDirection="column" height={termRows}>
       <Box paddingX={1}>
         <Text bold color="cyan">dotenvx-ui</Text>
         <Text dimColor>  {selectedFile.relativePath}  ·  {files.length} files  ·  {encCount} enc</Text>
       </Box>
-      <Box flexGrow={1}>
+      <Box height={listRows}>
         <FileList files={files} selectedIndex={fileIndex} focused={focus === "files"} interactive={interactive} onSelect={onSelectFile} />
         <KeyTable file={selectedFile} keys={keys} selectedIndex={keyIndex}
-          focused={focus === "keys"} interactive={interactive} revealed={revealed} onSelect={onSelectKey} />
+          focused={focus === "keys"} interactive={interactive} revealed={revealed} onSelect={onSelectKey}
+          maxRows={listRows} />
       </Box>
       {extra}
+      <ValuePreview keys={keys} keyIndex={keyIndex} focus={focus} revealed={revealed} width={termCols} />
       <StatusBar focus={focus} message={statusMsg} />
+    </Box>
+  );
+}
+
+function ValuePreview({ keys, keyIndex, focus, revealed, width }: {
+  keys: EnvKey[];
+  keyIndex: number;
+  focus: Focus;
+  revealed: Map<string, string>;
+  width: number;
+}) {
+  if (focus !== "keys") return null;
+  const k = keys[keyIndex];
+  if (!k) return null;
+
+  let value: string;
+  if (k.encrypted) {
+    value = revealed.has(k.key) ? revealed.get(k.key)! : "••••  (press r to reveal)";
+  } else {
+    value = revealed.has(k.key) ? revealed.get(k.key)! : k.value;
+  }
+
+  const flat = value.replace(/\n/g, "↵ ");
+
+  return (
+    <Box
+      borderStyle="single"
+      borderTop borderBottom={false} borderLeft={false} borderRight={false}
+      paddingX={1}
+      width={width}
+    >
+      <Text bold color="cyan">{k.key}  </Text>
+      <Text dimColor>·  </Text>
+      <Text truncate>{flat}</Text>
     </Box>
   );
 }
