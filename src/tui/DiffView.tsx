@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useInput, useStdin } from "ink";
 import { readEnvFile } from "../core/parser/index.js";
 import { decryptAllValues, isEncryptedValue } from "../core/dotenvx.js";
@@ -76,15 +76,46 @@ export function DiffView({ left, files, onClose }: Props) {
   const [rowScroll, setRowScroll] = useState(0);
 
   const rightFile = others[pickerIndex] ?? null;
-  const rightPath = rightFile?.path ?? null;
+
+  // Cache of built display maps; populated lazily so opening diff is instant.
+  const mapsCache = useRef(new Map<string, Map<string, string>>());
+  const [cacheVersion, setCacheVersion] = useState(0);
+
+  function getMap(file: EnvFile): Map<string, string> | null {
+    return mapsCache.current.get(file.path) ?? null;
+  }
+
+  function buildAndCache(file: EnvFile) {
+    if (!mapsCache.current.has(file.path)) {
+      mapsCache.current.set(file.path, buildDisplayMap(safeRead(file), file.path));
+      setCacheVersion((v) => v + 1);
+    }
+  }
+
+  // Build left + first right on mount so the initial view is populated.
+  useEffect(() => {
+    buildAndCache(left);
+    if (others[0]) buildAndCache(others[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pre-build neighbors while idle so navigation feels instant.
+  useEffect(() => {
+    const next = others[pickerIndex + 1];
+    const prev = others[pickerIndex - 1];
+    if (next) buildAndCache(next);
+    if (prev) buildAndCache(prev);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerIndex]);
 
   const rows = useMemo(() => {
     if (!rightFile) return [];
-    const leftMap = buildDisplayMap(safeRead(left), left.path);
-    const rightMap = buildDisplayMap(safeRead(rightFile), rightFile.path);
+    const leftMap = getMap(left);
+    const rightMap = getMap(rightFile);
+    if (!leftMap || !rightMap) return [];
     return buildRows(leftMap, rightMap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [left.path, rightPath]);
+  }, [left.path, rightFile?.path, cacheVersion]);
 
   // Picker viewport
   const pickerVisible = Math.min(others.length, PICKER_MAX);
