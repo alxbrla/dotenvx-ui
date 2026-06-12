@@ -47,16 +47,14 @@ export function decryptValue(
   if (!keyName) return null;
 
   const keysFile = findKeysFile(envFilePath);
-  try {
+  return silenced(() => {
     const result = dotenvx.get(keyName, {
       path: envFilePath,
       ...(keysFile ? { envKeysFile: keysFile } : {}),
       logLevel: "error",
     }) as string | undefined;
     return result ?? null;
-  } catch {
-    return null;
-  }
+  });
 }
 
 // Decrypts every encrypted value in the file in a single parse pass.
@@ -87,14 +85,16 @@ export function decryptAllValues(envFilePath: string): Record<string, string> {
     }
   }
 
-  try {
-    return dotenvx.parse(raw, {
-      ...(privateKey ? { privateKey } : {}),
-      processEnv: {},
-    }) as Record<string, string>;
-  } catch {
-    return {};
-  }
+  return silenced(() => {
+    try {
+      return dotenvx.parse(raw, {
+        ...(privateKey ? { privateKey } : {}),
+        processEnv: {},
+      }) as Record<string, string>;
+    } catch {
+      return {};
+    }
+  });
 }
 
 // Encrypts every plain-text key in the file using dotenvx set().
@@ -139,6 +139,29 @@ export function decryptFile(envFilePath: string): void {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+// Suppress dotenvx's unconditional stderr/stdout diagnostic output (e.g.
+// ☠ [MISSING_PRIVATE_KEY]) for the duration of fn, then restore streams.
+function silenced<T>(fn: () => T): T {
+  const origWrite = process.stderr.write.bind(process.stderr);
+  const origOut = process.stdout.write.bind(process.stdout);
+  // Only suppress dotenvx-style diagnostic lines
+  const mute = (chunk: unknown) => {
+    const s = String(chunk);
+    if (s.includes("[MISSING_PRIVATE_KEY]") || s.includes("could not decrypt") || s.includes("☠")) return true;
+    return false;
+  };
+  process.stderr.write = ((chunk: unknown, ...args: unknown[]) =>
+    mute(chunk) ? true : (origWrite as (...a: unknown[]) => boolean)(chunk, ...args)) as typeof process.stderr.write;
+  process.stdout.write = ((chunk: unknown, ...args: unknown[]) =>
+    mute(chunk) ? true : (origOut as (...a: unknown[]) => boolean)(chunk, ...args)) as typeof process.stdout.write;
+  try {
+    return fn();
+  } finally {
+    process.stderr.write = origWrite;
+    process.stdout.write = origOut;
+  }
+}
 
 function findKeysFile(envFilePath: string): string | null {
   let dir = dirname(envFilePath);
