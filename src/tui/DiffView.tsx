@@ -141,6 +141,7 @@ export function DiffView({ left, files, onClose }: Props) {
     if (key.pageDown) setRowScroll(Math.min(maxScroll, scroll + maxRows));
   }, { isActive: isRawModeSupported });
 
+  const keyColWidth = Math.min(48, Math.max(16, ...rows.map((r) => r.key.length))) + 2;
   const leftName = trunc(left.relativePath, COL_VAL);
   const rightName = rightFile ? trunc(rightFile.relativePath, COL_VAL) : "—";
 
@@ -179,13 +180,13 @@ export function DiffView({ left, files, onClose }: Props) {
       <Box flexDirection="column" flexGrow={1} paddingX={1}>
         {/* Column headers */}
         <Box borderStyle="single" borderBottom borderTop={false} borderLeft={false} borderRight={false}>
-          <Text bold color="cyan">{"KEY".padEnd(22)}</Text>
+          <Text bold color="cyan">{"KEY".padEnd(keyColWidth)}</Text>
           <Text bold>{"  "}{leftName.padEnd(COL_VAL + 2)}</Text>
           <Text bold>{rightName}</Text>
         </Box>
         {/* Rows */}
         {rowsAbove > 0 && <Text dimColor>↑ {rowsAbove} more</Text>}
-        {visibleRows.map((row) => <DiffRow key={row.key} row={row} />)}
+        {visibleRows.map((row) => <DiffRow key={row.key} row={row} keyColWidth={keyColWidth} />)}
         {rowsBelow > 0 && <Text dimColor>↓ {rowsBelow} more</Text>}
         {rows.length === 0 && (
           <Box marginTop={1}><Text dimColor>Select a file to compare.</Text></Box>
@@ -202,12 +203,12 @@ export function DiffView({ left, files, onClose }: Props) {
   );
 }
 
-function DiffRow({ row }: { row: DiffRow }) {
+function DiffRow({ row, keyColWidth }: { row: DiffRow; keyColWidth: number }) {
   const { key, leftDisplay, rightDisplay, status } = row;
   const color = status === "same" ? "green" : undefined;
   return (
     <Box>
-      <Text color={color}>{key.padEnd(22)}</Text>
+      <Text color={color}>{key.padEnd(keyColWidth)}</Text>
       <Text color={color}>{"  "}{(leftDisplay || "—").padEnd(COL_VAL + 2)}</Text>
       <Text color={color}>{rightDisplay || "—"}</Text>
     </Box>
