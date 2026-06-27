@@ -5,10 +5,12 @@
   --font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
-  background: #0D0D0F;
-  color: #F0F0F2;
+  background: #0d0d0f;
+  color: #f0f0f2;
   font-family: "Geist", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;

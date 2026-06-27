@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
-import type { EnvFile } from "./types.js";
+import { DiffView } from "./DiffView.js";
 import { FileList } from "./FileList.js";
 import { KeyTable } from "./KeyTable.js";
-import { DiffView } from "./DiffView.js";
+import type { EnvFile } from "./types.js";
 
 type View = "main" | "diff";
 
@@ -25,7 +25,9 @@ export function App() {
     }
   }, [selectedPath]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const selectedFile = files.find((f) => f.path === selectedPath) ?? null;
 
@@ -49,13 +51,19 @@ export function App() {
     <div className="flex flex-col h-screen overflow-hidden bg-[#0D0D0F]">
       {/* Header */}
       <header className="flex items-center gap-3 px-4 h-10 border-b border-[#2A2A2E] bg-[#141416] shrink-0">
-        <span className="text-[13px] font-semibold text-violet-500 tracking-wide">dotenvx-ui</span>
+        <span className="text-[13px] font-semibold text-violet-500 tracking-wide">
+          dotenvx-ui
+        </span>
         <span className="text-[#52525C] text-[13px]">·</span>
-        <span className="text-[11px] text-[#8A8A96]">{files.length} file{files.length !== 1 ? "s" : ""}</span>
+        <span className="text-[11px] text-[#8A8A96]">
+          {files.length} file{files.length !== 1 ? "s" : ""}
+        </span>
         {encCount > 0 && (
           <>
             <span className="text-[#52525C] text-[13px]">·</span>
-            <span className="text-[11px] text-[#8A8A96]">{encCount} encrypted</span>
+            <span className="text-[11px] text-[#8A8A96]">
+              {encCount} encrypted
+            </span>
           </>
         )}
       </header>
@@ -65,13 +73,25 @@ export function App() {
         <FileList
           files={files}
           selectedPath={selectedPath}
-          onSelect={(path) => { setSelectedPath(path); setView("main"); }}
+          onSelect={(path) => {
+            setSelectedPath(path);
+            setView("main");
+          }}
         />
         <main className="flex-1 overflow-hidden flex flex-col">
           {view === "diff" && selectedFile ? (
-            <DiffView file={selectedFile} files={files} onClose={() => setView("main")} />
+            <DiffView
+              file={selectedFile}
+              files={files}
+              onClose={() => setView("main")}
+            />
           ) : selectedFile ? (
-            <KeyTable file={selectedFile} files={files} onRefresh={refresh} onDiff={() => setView("diff")} />
+            <KeyTable
+              file={selectedFile}
+              files={files}
+              onRefresh={refresh}
+              onDiff={() => setView("diff")}
+            />
           ) : (
             <div className="flex-1 flex items-center justify-center text-[#52525C] text-[13px]">
               No file selected

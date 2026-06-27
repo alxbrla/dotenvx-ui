@@ -1,16 +1,16 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
 import {
-  isEncryptedValue,
-  getPublicKey,
-  getPrivateKey,
-  decryptValue,
   decryptAllValues,
-  encryptFile,
   decryptFile,
+  decryptValue,
+  encryptFile,
+  getPrivateKey,
+  getPublicKey,
+  isEncryptedValue,
 } from "../core/dotenvx.js";
 import { readEnvFile } from "../core/parser/index.js";
 import type { EnvFile } from "../core/types.js";
@@ -54,8 +54,14 @@ test("encryptFile: encrypts plain keys and creates .env.keys", () => {
     encryptFile(file);
 
     const keys = readEnvFile(file).filter((k) => k.key !== "DOTENV_PUBLIC_KEY");
-    assert.ok(keys.every((k) => isEncryptedValue(k.value)), "all values should be encrypted");
-    assert.ok(existsSync(join(dir, ".env.keys")), ".env.keys should be created");
+    assert.ok(
+      keys.every((k) => isEncryptedValue(k.value)),
+      "all values should be encrypted",
+    );
+    assert.ok(
+      existsSync(join(dir, ".env.keys")),
+      ".env.keys should be created",
+    );
   } finally {
     cleanup(dir);
   }
@@ -81,7 +87,9 @@ test("decryptValue: decrypts an encrypted value back to plaintext", () => {
   try {
     encryptFile(file);
 
-    const encryptedVal = readEnvFile(file).find((k) => k.key === "SECRET")!.value;
+    const encryptedVal = readEnvFile(file).find(
+      (k) => k.key === "SECRET",
+    )!.value;
     assert.ok(isEncryptedValue(encryptedVal));
 
     const plain = decryptValue(encryptedVal, file);
@@ -93,7 +101,10 @@ test("decryptValue: decrypts an encrypted value back to plaintext", () => {
 
 test("decryptValue: returns null when no private key available", () => {
   // Encrypted value from a different keypair — no .env.keys present
-  const result = decryptValue("encrypted:BFakeEncryptedValue==", "/nonexistent/.env");
+  const result = decryptValue(
+    "encrypted:BFakeEncryptedValue==",
+    "/nonexistent/.env",
+  );
   assert.equal(result, null);
 });
 
@@ -106,7 +117,9 @@ test("decryptFile: decrypts all keys back to plaintext", () => {
   const { dir, file } = fixture("FOO=bar\nBAZ=qux\n");
   try {
     encryptFile(file);
-    const encKeys = readEnvFile(file).filter((k) => k.key !== "DOTENV_PUBLIC_KEY");
+    const encKeys = readEnvFile(file).filter(
+      (k) => k.key !== "DOTENV_PUBLIC_KEY",
+    );
     assert.ok(encKeys.every((k) => isEncryptedValue(k.value)));
 
     decryptFile(file);
@@ -128,9 +141,9 @@ test("decryptAllValues: decrypts every encrypted value in one pass", () => {
     encryptFile(file);
 
     const all = decryptAllValues(file);
-    assert.equal(all["FOO"], "bar");
-    assert.equal(all["BAZ"], "qux");
-    assert.equal(all["PLAIN"], "visible");
+    assert.equal(all.FOO, "bar");
+    assert.equal(all.BAZ, "qux");
+    assert.equal(all.PLAIN, "visible");
   } finally {
     cleanup(dir);
   }
@@ -143,7 +156,10 @@ test("decryptAllValues: keeps values encrypted when no private key available", (
     rmSync(join(dir, ".env.keys"));
 
     const all = decryptAllValues(file);
-    assert.ok(isEncryptedValue(all["FOO"]!), "value should stay encrypted without a key");
+    assert.ok(
+      isEncryptedValue(all.FOO!),
+      "value should stay encrypted without a key",
+    );
   } finally {
     cleanup(dir);
   }

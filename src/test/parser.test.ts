@@ -1,14 +1,14 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
 import {
-  readEnvFile,
-  writeEnvFile,
   addKey,
-  updateKey,
+  readEnvFile,
   removeKey,
+  updateKey,
+  writeEnvFile,
 } from "../core/parser/index.js";
 
 function fixture(content: string): string {
@@ -37,7 +37,9 @@ test("reads plain key=value", () => {
     assert.equal(keys[0]!.value, "bar");
     assert.equal(keys[1]!.key, "BAZ");
     assert.equal(keys[1]!.value, "qux");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("reads double-quoted value", () => {
@@ -45,7 +47,9 @@ test("reads double-quoted value", () => {
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, "hello world");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("reads single-quoted value", () => {
@@ -53,7 +57,9 @@ test("reads single-quoted value", () => {
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, "hello world");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("reads multiline value with escaped \\n", () => {
@@ -61,7 +67,9 @@ test("reads multiline value with escaped \\n", () => {
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, "line one\nline two");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("reads multiline value with real newlines inside quotes", () => {
@@ -72,16 +80,21 @@ test("reads multiline value with real newlines inside quotes", () => {
     assert.equal(keys[0]!.value, "line one\nline two");
     assert.equal(keys[1]!.key, "OTHER");
     assert.equal(keys[1]!.value, "after");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("reads SSH private key style multiline", () => {
-  const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEow...\n-----END RSA PRIVATE KEY-----";
+  const pem =
+    "-----BEGIN RSA PRIVATE KEY-----\nMIIEow...\n-----END RSA PRIVATE KEY-----";
   const f = fixture(`SSH_KEY="${pem.replace(/\n/g, "\\n")}"\n`);
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, pem);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("preserves comment as key.comment", () => {
@@ -89,7 +102,9 @@ test("preserves comment as key.comment", () => {
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.comment, "database connection");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("skips comment-only lines and blank lines", () => {
@@ -98,7 +113,9 @@ test("skips comment-only lines and blank lines", () => {
     const keys = readEnvFile(f);
     assert.equal(keys.length, 1);
     assert.equal(keys[0]!.key, "FOO");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("marks encrypted: values as encrypted", () => {
@@ -106,7 +123,9 @@ test("marks encrypted: values as encrypted", () => {
   try {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.encrypted, true);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 // --- round-trip ---
@@ -118,7 +137,9 @@ test("round-trip: write back unchanged keys produces identical file", () => {
     const keys = readEnvFile(f);
     writeEnvFile(f, keys);
     assert.equal(read(f), original);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("round-trip: preserves blank lines between keys", () => {
@@ -127,7 +148,9 @@ test("round-trip: preserves blank lines between keys", () => {
   try {
     writeEnvFile(f, readEnvFile(f));
     assert.equal(read(f), original);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("round-trip: preserves comments above keys", () => {
@@ -136,7 +159,9 @@ test("round-trip: preserves comments above keys", () => {
   try {
     writeEnvFile(f, readEnvFile(f));
     assert.equal(read(f), original);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 // --- addKey ---
@@ -149,14 +174,18 @@ test("addKey: appends new key", () => {
     assert.equal(keys.length, 2);
     assert.equal(keys[1]!.key, "BAZ");
     assert.equal(keys[1]!.value, "qux");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("addKey: throws if key already exists", () => {
   const f = fixture(`FOO=bar\n`);
   try {
     assert.throws(() => addKey(f, "FOO", "other"), /already exists/);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 // --- updateKey ---
@@ -168,7 +197,9 @@ test("updateKey: changes value of existing key", () => {
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, "newval");
     assert.equal(keys[1]!.value, "qux");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("updateKey: preserves comment above updated key", () => {
@@ -177,14 +208,18 @@ test("updateKey: preserves comment above updated key", () => {
   try {
     updateKey(f, "FOO", "new");
     assert.ok(read(f).startsWith("# keep this\n"));
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("updateKey: throws if key not found", () => {
   const f = fixture(`FOO=bar\n`);
   try {
     assert.throws(() => updateKey(f, "MISSING", "val"), /not found/);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("updateKey: handles multiline value update", () => {
@@ -193,7 +228,9 @@ test("updateKey: handles multiline value update", () => {
     updateKey(f, "KEY", "line one\nline two");
     const keys = readEnvFile(f);
     assert.equal(keys[0]!.value, "line one\nline two");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 // --- removeKey ---
@@ -205,7 +242,9 @@ test("removeKey: removes key and its comment", () => {
     const keys = readEnvFile(f);
     assert.equal(keys.length, 1);
     assert.equal(keys[0]!.key, "BAZ");
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });
 
 test("removeKey: removing nonexistent key leaves file unchanged", () => {
@@ -214,5 +253,7 @@ test("removeKey: removing nonexistent key leaves file unchanged", () => {
   try {
     removeKey(f, "MISSING");
     assert.equal(read(f), original);
-  } finally { cleanup(f); }
+  } finally {
+    cleanup(f);
+  }
 });

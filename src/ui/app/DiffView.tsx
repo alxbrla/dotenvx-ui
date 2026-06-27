@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import type { EnvFile } from "./types.js";
 
@@ -14,14 +14,16 @@ function maskValue(value: string, key: string): string {
   const SECRET = /secret|password|token|key|private|api_?key/i;
   if (SECRET.test(key)) {
     const visible = Math.min(4, Math.floor(value.length / 2));
-    return value.slice(0, visible) + "••••";
+    return `${value.slice(0, visible)}••••`;
   }
   const first = value.split("\n")[0]!;
-  return first.length > 32 ? first.slice(0, 31) + "…" : first;
+  return first.length > 32 ? `${first.slice(0, 31)}…` : first;
 }
 
 async function resolveValues(file: EnvFile): Promise<Map<string, string>> {
-  const plain = new Map(file.keys.filter((k) => !k.encrypted).map((k) => [k.key, k.value]));
+  const plain = new Map(
+    file.keys.filter((k) => !k.encrypted).map((k) => [k.key, k.value]),
+  );
   if (!file.encrypted) return plain;
   try {
     const { values } = await api.decryptAll(file.path);
@@ -35,25 +37,34 @@ async function resolveValues(file: EnvFile): Promise<Map<string, string>> {
 export function DiffView({ file, files, onClose }: Props) {
   const others = files.filter((f) => f.path !== file.path);
   const [targetPath, setTargetPath] = useState(others[0]?.path ?? "");
-  const [leftValues, setLeftValues] = useState<Map<string, string> | null>(null);
-  const [rightValues, setRightValues] = useState<Map<string, string> | null>(null);
+  const [leftValues, setLeftValues] = useState<Map<string, string> | null>(
+    null,
+  );
+  const [rightValues, setRightValues] = useState<Map<string, string> | null>(
+    null,
+  );
 
   const target = files.find((f) => f.path === targetPath) ?? null;
 
   useEffect(() => {
     setLeftValues(null);
     resolveValues(file).then(setLeftValues);
-  }, [file.path]);
+  }, [file.path, file]);
 
   useEffect(() => {
-    if (!target) { setRightValues(null); return; }
+    if (!target) {
+      setRightValues(null);
+      return;
+    }
     setRightValues(null);
     resolveValues(target).then(setRightValues);
-  }, [targetPath]);
+  }, [target]);
 
   const leftKeys = new Map(file.keys.map((k) => [k.key, k]));
   const rightKeys = new Map(target?.keys.map((k) => [k.key, k]) ?? []);
-  const allKeys = Array.from(new Set([...leftKeys.keys(), ...rightKeys.keys()])).sort();
+  const allKeys = Array.from(
+    new Set([...leftKeys.keys(), ...rightKeys.keys()]),
+  ).sort();
 
   const status = (key: string): RowStatus => {
     const l = leftKeys.has(key);
@@ -76,7 +87,9 @@ export function DiffView({ file, files, onClose }: Props) {
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 h-10 border-b border-[#2A2A2E] bg-[#141416] shrink-0">
         <span className="text-[13px] font-semibold text-[#F0F0F2]">Diff</span>
-        <span className="font-mono text-[13px] text-[#8A8A96]">{file.relativePath}</span>
+        <span className="font-mono text-[13px] text-[#8A8A96]">
+          {file.relativePath}
+        </span>
         <span className="text-[11px] text-[#52525C]">vs</span>
         <select
           className="h-8 flex-1 max-w-xs bg-[#141416] border border-[#2A2A2E] rounded-md text-[#F0F0F2] font-mono text-[13px] px-2 outline-none focus:border-violet-600 focus:shadow-[0_0_0_3px_#6D28D933] cursor-pointer"
@@ -84,7 +97,9 @@ export function DiffView({ file, files, onClose }: Props) {
           onChange={(e) => setTargetPath(e.target.value)}
         >
           {others.map((f) => (
-            <option key={f.path} value={f.path}>{f.relativePath}</option>
+            <option key={f.path} value={f.path}>
+              {f.relativePath}
+            </option>
           ))}
         </select>
         <button
@@ -125,12 +140,21 @@ export function DiffView({ file, files, onClose }: Props) {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto">
-          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+          <table
+            className="w-full border-collapse"
+            style={{ tableLayout: "fixed" }}
+          >
             <thead>
               <tr>
-                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">Key</th>
-                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">{file.relativePath}</th>
-                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">{target?.relativePath ?? "—"}</th>
+                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">
+                  Key
+                </th>
+                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">
+                  {file.relativePath}
+                </th>
+                <th className="sticky top-0 bg-[#0D0D0F] px-4 h-8 text-left text-[11px] font-medium text-[#52525C] border-b border-[#2A2A2E] w-1/3">
+                  {target?.relativePath ?? "—"}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -145,18 +169,26 @@ export function DiffView({ file, files, onClose }: Props) {
                       {key}
                     </td>
                     <td className="px-4 border-b border-[#2A2A2E] font-mono text-[13px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                      {leftKeys.has(key)
-                        ? <span className={same ? "text-green-600" : "text-[#8A8A96]"}>
-                            {lVal !== undefined ? maskValue(lVal, key) : "🔒"}
-                          </span>
-                        : <span className="text-[#52525C]">—</span>}
+                      {leftKeys.has(key) ? (
+                        <span
+                          className={same ? "text-green-600" : "text-[#8A8A96]"}
+                        >
+                          {lVal !== undefined ? maskValue(lVal, key) : "🔒"}
+                        </span>
+                      ) : (
+                        <span className="text-[#52525C]">—</span>
+                      )}
                     </td>
                     <td className="px-4 border-b border-[#2A2A2E] font-mono text-[13px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                      {rightKeys.has(key)
-                        ? <span className={same ? "text-green-600" : "text-[#8A8A96]"}>
-                            {rVal !== undefined ? maskValue(rVal, key) : "🔒"}
-                          </span>
-                        : <span className="text-[#52525C]">—</span>}
+                      {rightKeys.has(key) ? (
+                        <span
+                          className={same ? "text-green-600" : "text-[#8A8A96]"}
+                        >
+                          {rVal !== undefined ? maskValue(rVal, key) : "🔒"}
+                        </span>
+                      ) : (
+                        <span className="text-[#52525C]">—</span>
+                      )}
                     </td>
                   </tr>
                 );

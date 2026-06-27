@@ -9,11 +9,12 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const api = {
-  files: () =>
-    fetch("/api/files").then((r) => json<EnvFile[]>(r)),
+  files: () => fetch("/api/files").then((r) => json<EnvFile[]>(r)),
 
   file: (path: string) =>
-    fetch(`/api/file?path=${encodeURIComponent(path)}`).then((r) => json<EnvFile>(r)),
+    fetch(`/api/file?path=${encodeURIComponent(path)}`).then((r) =>
+      json<EnvFile>(r),
+    ),
 
   putKey: (path: string, key: string, value: string, isNew: boolean) =>
     fetch("/api/key", {

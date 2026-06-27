@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Text } from "ink";
 
 type Props = {
@@ -33,7 +32,9 @@ function Hints({ hints }: { hints: Hint[] }) {
     <Box gap={2}>
       {hints.map(({ key, action }) => (
         <Box key={key} gap={1}>
-          <Text bold color="cyan">{key}</Text>
+          <Text bold color="cyan">
+            {key}
+          </Text>
           <Text dimColor>{action}</Text>
         </Box>
       ))}
@@ -43,11 +44,19 @@ function Hints({ hints }: { hints: Hint[] }) {
 
 export function StatusBar({ message, focus }: Props) {
   return (
-    <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
-      {message
-        ? <Text>{message}</Text>
-        : <Hints hints={focus === "files" ? FILE_HINTS : KEY_HINTS} />
-      }
+    <Box
+      borderStyle="single"
+      borderTop
+      borderBottom={false}
+      borderLeft={false}
+      borderRight={false}
+      paddingX={1}
+    >
+      {message ? (
+        <Text>{message}</Text>
+      ) : (
+        <Hints hints={focus === "files" ? FILE_HINTS : KEY_HINTS} />
+      )}
     </Box>
   );
 }

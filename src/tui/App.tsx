@@ -1,16 +1,29 @@
-import React, { useState } from "react";
-import { Box, Text, useApp, useInput, useStdin } from "ink";
 import clipboard from "clipboardy";
-import { FileList } from "./FileList.js";
-import { KeyTable } from "./KeyTable.js";
-import { StatusBar } from "./StatusBar.js";
+import { Box, Text, useApp, useInput, useStdin } from "ink";
+import type React from "react";
+import { useState } from "react";
+import {
+  decryptAllValues,
+  decryptFile,
+  decryptValue,
+  encryptFile,
+  encryptKey,
+  isEncryptedValue,
+} from "../core/dotenvx.js";
+import {
+  addKey,
+  readEnvFile,
+  removeKey,
+  updateKey,
+} from "../core/parser/index.js";
+import type { EnvFile, EnvKey } from "../core/types.js";
 import { DiffView } from "./DiffView.js";
+import { FileList } from "./FileList.js";
 import { HelpOverlay } from "./HelpOverlay.js";
 import { InlineForm } from "./InlineForm.js";
-import { readEnvFile, addKey, updateKey, removeKey } from "../core/parser/index.js";
-import { decryptValue, decryptAllValues, isEncryptedValue, encryptFile, decryptFile, encryptKey } from "../core/dotenvx.js";
+import { KeyTable } from "./KeyTable.js";
+import { StatusBar } from "./StatusBar.js";
 import { useTerminalCols, useTerminalRows } from "./useTerminalRows.js";
-import type { EnvFile, EnvKey } from "../core/types.js";
 
 type Props = { files: EnvFile[] };
 type Focus = "files" | "keys";
@@ -42,7 +55,11 @@ export function App({ files }: Props) {
   const selectedFile = files[fileIndex]!;
 
   function loadKeys(file: EnvFile): EnvKey[] {
-    try { return readEnvFile(file.path); } catch { return []; }
+    try {
+      return readEnvFile(file.path);
+    } catch {
+      return [];
+    }
   }
 
   function refreshKeys() {
@@ -61,116 +78,152 @@ export function App({ files }: Props) {
     setTimeout(() => setStatusMsg(undefined), ms);
   }
 
-  useInput((input, key) => {
-    if (input === "q" || key.escape) { exit(); return; }
-    if (input === "?") { setMode({ type: "help" }); return; }
-
-    if (key.tab) {
-      setFocus((f) => f === "files" ? "keys" : "files");
-      return;
-    }
-
-    if (focus !== "keys") return;
-
-    const k = keys[keyIndex];
-
-    // Reveal / hide single key
-    if (input === "r") {
-      if (!k) return;
-      if (revealed.has(k.key)) {
-        setRevealed((prev) => { const next = new Map(prev); next.delete(k.key); return next; });
+  useInput(
+    (input, key) => {
+      if (input === "q" || key.escape) {
+        exit();
         return;
       }
-      if (k.encrypted) {
-        const plain = decryptValue(k.value, selectedFile.path);
-        if (plain === null) { flash("🔒 Private key not found in environment"); return; }
-        setRevealed((prev) => new Map(prev).set(k.key, plain));
-      } else {
-        setRevealed((prev) => new Map(prev).set(k.key, k.value));
-      }
-      return;
-    }
-
-    // Reveal / hide all keys in this file
-    if (input === "R") {
-      if (revealed.size > 0) {
-        setRevealed(new Map());
+      if (input === "?") {
+        setMode({ type: "help" });
         return;
       }
-      const decrypted = keys.some((e) => e.encrypted) ? decryptAllValues(selectedFile.path) : {};
-      const next = new Map<string, string>();
-      for (const entry of keys) {
-        if (entry.encrypted) {
-          const plain = decrypted[entry.key];
-          if (plain === undefined || isEncryptedValue(plain)) { flash("🔒 Private key not found — cannot reveal all"); return; }
-          next.set(entry.key, plain);
-        } else {
-          next.set(entry.key, entry.value);
+
+      if (key.tab) {
+        setFocus((f) => (f === "files" ? "keys" : "files"));
+        return;
+      }
+
+      if (focus !== "keys") return;
+
+      const k = keys[keyIndex];
+
+      // Reveal / hide single key
+      if (input === "r") {
+        if (!k) return;
+        if (revealed.has(k.key)) {
+          setRevealed((prev) => {
+            const next = new Map(prev);
+            next.delete(k.key);
+            return next;
+          });
+          return;
         }
+        if (k.encrypted) {
+          const plain = decryptValue(k.value, selectedFile.path);
+          if (plain === null) {
+            flash("🔒 Private key not found in environment");
+            return;
+          }
+          setRevealed((prev) => new Map(prev).set(k.key, plain));
+        } else {
+          setRevealed((prev) => new Map(prev).set(k.key, k.value));
+        }
+        return;
       }
-      setRevealed(next);
-      return;
-    }
 
-    // Copy
-    if (input === "y") {
-      if (!k) return;
-      const value = k.encrypted
-        ? decryptValue(k.value, selectedFile.path)
-        : k.value;
-      if (value === null) { flash("🔒 Private key not found — cannot copy"); return; }
-      clipboard.writeSync(value);
-      flash(`Copied ${k.key}`);
-      return;
-    }
-
-    // Edit — for encrypted keys, pre-decrypt so the form shows plaintext
-    if (key.return) {
-      if (!k) return;
-      if (k.encrypted) {
-        const plain = decryptValue(k.value, selectedFile.path);
-        if (plain === null) { flash("🔒 Private key not found — cannot edit"); return; }
-        setMode({ type: "edit", key: { ...k, value: plain } });
-      } else {
-        setMode({ type: "edit", key: k });
+      // Reveal / hide all keys in this file
+      if (input === "R") {
+        if (revealed.size > 0) {
+          setRevealed(new Map());
+          return;
+        }
+        const decrypted = keys.some((e) => e.encrypted)
+          ? decryptAllValues(selectedFile.path)
+          : {};
+        const next = new Map<string, string>();
+        for (const entry of keys) {
+          if (entry.encrypted) {
+            const plain = decrypted[entry.key];
+            if (plain === undefined || isEncryptedValue(plain)) {
+              flash("🔒 Private key not found — cannot reveal all");
+              return;
+            }
+            next.set(entry.key, plain);
+          } else {
+            next.set(entry.key, entry.value);
+          }
+        }
+        setRevealed(next);
+        return;
       }
-      return;
-    }
 
-    // Add
-    if (input === "a") {
-      setMode({ type: "add-key" });
-      return;
-    }
+      // Copy
+      if (input === "y") {
+        if (!k) return;
+        const value = k.encrypted
+          ? decryptValue(k.value, selectedFile.path)
+          : k.value;
+        if (value === null) {
+          flash("🔒 Private key not found — cannot copy");
+          return;
+        }
+        clipboard.writeSync(value);
+        flash(`Copied ${k.key}`);
+        return;
+      }
 
-    // Delete
-    if (input === "D") {
-      if (!k) return;
-      setMode({ type: "confirm-delete", key: k });
-      return;
-    }
+      // Edit — for encrypted keys, pre-decrypt so the form shows plaintext
+      if (key.return) {
+        if (!k) return;
+        if (k.encrypted) {
+          const plain = decryptValue(k.value, selectedFile.path);
+          if (plain === null) {
+            flash("🔒 Private key not found — cannot edit");
+            return;
+          }
+          setMode({ type: "edit", key: { ...k, value: plain } });
+        } else {
+          setMode({ type: "edit", key: k });
+        }
+        return;
+      }
 
-    // Diff
-    if (input === "d") {
-      setMode({ type: "diff" });
-      return;
-    }
+      // Add
+      if (input === "a") {
+        setMode({ type: "add-key" });
+        return;
+      }
 
-    // Encrypt / decrypt file
-    if (input === "e") {
-      setMode({ type: "confirm-encrypt" });
-      return;
-    }
-  }, { isActive: isRawModeSupported && mode.type === "normal" });
+      // Delete
+      if (input === "D") {
+        if (!k) return;
+        setMode({ type: "confirm-delete", key: k });
+        return;
+      }
+
+      // Diff
+      if (input === "d") {
+        setMode({ type: "diff" });
+        return;
+      }
+
+      // Encrypt / decrypt file
+      if (input === "e") {
+        setMode({ type: "confirm-encrypt" });
+        return;
+      }
+    },
+    { isActive: isRawModeSupported && mode.type === "normal" },
+  );
 
   // --- mode renderers ---
 
   if (mode.type === "edit") {
     const editing = mode.key;
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
         extra={
           <InlineForm
             label={`Edit ${editing.key}`}
@@ -181,7 +234,11 @@ export function App({ files }: Props) {
               } else {
                 updateKey(selectedFile.path, editing.key, val);
               }
-              setRevealed((prev) => { const next = new Map(prev); next.delete(editing.key); return next; });
+              setRevealed((prev) => {
+                const next = new Map(prev);
+                next.delete(editing.key);
+                return next;
+              });
               refreshKeys();
               setMode({ type: "normal" });
               flash(`Saved ${editing.key}`);
@@ -195,15 +252,27 @@ export function App({ files }: Props) {
 
   if (mode.type === "add-key") {
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
         extra={
           <InlineForm
             key="add-key"
             label="New key name"
             onSubmit={(keyName) => {
-              if (!keyName.trim()) { setMode({ type: "normal" }); return; }
+              if (!keyName.trim()) {
+                setMode({ type: "normal" });
+                return;
+              }
               setMode({ type: "add-value", keyName: keyName.trim() });
             }}
             onCancel={() => setMode({ type: "normal" })}
@@ -216,9 +285,18 @@ export function App({ files }: Props) {
   if (mode.type === "add-value") {
     const { keyName } = mode;
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
         extra={
           <InlineForm
             key="add-value"
@@ -252,10 +330,26 @@ export function App({ files }: Props) {
       flash(`Added ${keyName}${encrypt ? " (encrypted)" : ""}`);
     };
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
-        extra={<ConfirmAddEncrypt keyName={keyName} onEncrypt={() => commit(true)} onPlain={() => commit(false)} onCancel={() => setMode({ type: "normal" })} />}
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
+        extra={
+          <ConfirmAddEncrypt
+            keyName={keyName}
+            onEncrypt={() => commit(true)}
+            onPlain={() => commit(false)}
+            onCancel={() => setMode({ type: "normal" })}
+          />
+        }
       />
     );
   }
@@ -263,19 +357,31 @@ export function App({ files }: Props) {
   if (mode.type === "confirm-delete") {
     const { key: k } = mode;
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
-        extra={<ConfirmDelete keyName={k.key}
-          onConfirm={() => {
-            removeKey(selectedFile.path, k.key);
-            refreshKeys();
-            setKeyIndex(Math.max(0, keyIndex - 1));
-            setMode({ type: "normal" });
-            flash(`Deleted ${k.key}`);
-          }}
-          onCancel={() => setMode({ type: "normal" })}
-        />}
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
+        extra={
+          <ConfirmDelete
+            keyName={k.key}
+            onConfirm={() => {
+              removeKey(selectedFile.path, k.key);
+              refreshKeys();
+              setKeyIndex(Math.max(0, keyIndex - 1));
+              setMode({ type: "normal" });
+              flash(`Deleted ${k.key}`);
+            }}
+            onCancel={() => setMode({ type: "normal" })}
+          />
+        }
       />
     );
   }
@@ -283,30 +389,43 @@ export function App({ files }: Props) {
   if (mode.type === "confirm-encrypt") {
     const isEncrypted = selectedFile.encrypted;
     return (
-      <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-        focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-        statusMsg={statusMsg} focus2={focus} interactive={false}
-        extra={<ConfirmEncrypt
-          decrypt={isEncrypted}
-          fileName={selectedFile.relativePath}
-          onConfirm={() => {
-            try {
-              if (isEncrypted) {
-                decryptFile(selectedFile.path);
-                flash(`Decrypted ${selectedFile.relativePath}`);
-              } else {
-                encryptFile(selectedFile.path);
-                flash(`Encrypted ${selectedFile.relativePath}`);
+      <Layout
+        files={files}
+        fileIndex={fileIndex}
+        keys={keys}
+        keyIndex={keyIndex}
+        focus={focus}
+        revealed={revealed}
+        onSelectFile={selectFile}
+        onSelectKey={setKeyIndex}
+        statusMsg={statusMsg}
+        focus2={focus}
+        interactive={false}
+        extra={
+          <ConfirmEncrypt
+            decrypt={isEncrypted}
+            fileName={selectedFile.relativePath}
+            onConfirm={() => {
+              try {
+                if (isEncrypted) {
+                  decryptFile(selectedFile.path);
+                  flash(`Decrypted ${selectedFile.relativePath}`);
+                } else {
+                  encryptFile(selectedFile.path);
+                  flash(`Encrypted ${selectedFile.relativePath}`);
+                }
+              } catch (err) {
+                flash(
+                  `Error: ${err instanceof Error ? err.message : String(err)}`,
+                );
               }
-            } catch (err) {
-              flash(`Error: ${err instanceof Error ? err.message : String(err)}`);
-            }
-            refreshKeys();
-            setRevealed(new Map());
-            setMode({ type: "normal" });
-          }}
-          onCancel={() => setMode({ type: "normal" })}
-        />}
+              refreshKeys();
+              setRevealed(new Map());
+              setMode({ type: "normal" });
+            }}
+            onCancel={() => setMode({ type: "normal" })}
+          />
+        }
       />
     );
   }
@@ -326,9 +445,18 @@ export function App({ files }: Props) {
   }
 
   return (
-    <Layout files={files} fileIndex={fileIndex} keys={keys} keyIndex={keyIndex}
-      focus={focus} revealed={revealed} onSelectFile={selectFile} onSelectKey={setKeyIndex}
-      statusMsg={statusMsg} focus2={focus} interactive={true}
+    <Layout
+      files={files}
+      fileIndex={fileIndex}
+      keys={keys}
+      keyIndex={keyIndex}
+      focus={focus}
+      revealed={revealed}
+      onSelectFile={selectFile}
+      onSelectKey={setKeyIndex}
+      statusMsg={statusMsg}
+      focus2={focus}
+      interactive={true}
     />
   );
 }
@@ -352,8 +480,19 @@ type LayoutProps = {
   extra?: React.ReactNode;
 };
 
-function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed,
-  onSelectFile, onSelectKey, statusMsg, extra }: LayoutProps) {
+function Layout({
+  files,
+  fileIndex,
+  keys,
+  keyIndex,
+  focus,
+  interactive,
+  revealed,
+  onSelectFile,
+  onSelectKey,
+  statusMsg,
+  extra,
+}: LayoutProps) {
   const selectedFile = files[fileIndex]!;
   const encCount = files.filter((f) => f.encrypted).length;
   const termRows = useTerminalRows();
@@ -365,23 +504,55 @@ function Layout({ files, fileIndex, keys, keyIndex, focus, interactive, revealed
   return (
     <Box flexDirection="column" height={termRows}>
       <Box paddingX={1}>
-        <Text bold color="cyan">dotenvx-ui</Text>
-        <Text dimColor>  {selectedFile.relativePath}  ·  {files.length} files  ·  {encCount} enc</Text>
+        <Text bold color="cyan">
+          dotenvx-ui
+        </Text>
+        <Text dimColor>
+          {" "}
+          {selectedFile.relativePath} · {files.length} files · {encCount} enc
+        </Text>
       </Box>
       <Box height={listRows}>
-        <FileList files={files} selectedIndex={fileIndex} focused={focus === "files"} interactive={interactive} onSelect={onSelectFile} />
-        <KeyTable file={selectedFile} keys={keys} selectedIndex={keyIndex}
-          focused={focus === "keys"} interactive={interactive} revealed={revealed} onSelect={onSelectKey}
-          maxRows={listRows} />
+        <FileList
+          files={files}
+          selectedIndex={fileIndex}
+          focused={focus === "files"}
+          interactive={interactive}
+          onSelect={onSelectFile}
+        />
+        <KeyTable
+          file={selectedFile}
+          keys={keys}
+          selectedIndex={keyIndex}
+          focused={focus === "keys"}
+          interactive={interactive}
+          revealed={revealed}
+          onSelect={onSelectKey}
+          maxRows={listRows}
+        />
       </Box>
       {extra}
-      {!extra && <ValuePreview keys={keys} keyIndex={keyIndex} focus={focus} revealed={revealed} width={termCols} />}
+      {!extra && (
+        <ValuePreview
+          keys={keys}
+          keyIndex={keyIndex}
+          focus={focus}
+          revealed={revealed}
+          width={termCols}
+        />
+      )}
       <StatusBar focus={focus} message={statusMsg} />
     </Box>
   );
 }
 
-function ValuePreview({ keys, keyIndex, focus, revealed, width }: {
+function ValuePreview({
+  keys,
+  keyIndex,
+  focus,
+  revealed,
+  width,
+}: {
   keys: EnvKey[];
   keyIndex: number;
   focus: Focus;
@@ -394,7 +565,9 @@ function ValuePreview({ keys, keyIndex, focus, revealed, width }: {
 
   let value: string;
   if (k.encrypted) {
-    value = revealed.has(k.key) ? revealed.get(k.key)! : "••••  (press r to reveal)";
+    value = revealed.has(k.key)
+      ? revealed.get(k.key)!
+      : "••••  (press r to reveal)";
   } else {
     value = revealed.has(k.key) ? revealed.get(k.key)! : k.value;
   }
@@ -404,13 +577,20 @@ function ValuePreview({ keys, keyIndex, focus, revealed, width }: {
   return (
     <Box
       borderStyle="single"
-      borderTop borderBottom={false} borderLeft={false} borderRight={false}
+      borderTop
+      borderBottom={false}
+      borderLeft={false}
+      borderRight={false}
       paddingX={1}
       width={width}
     >
-      <Text bold color="cyan">{k.key}  </Text>
-      <Text dimColor>·  </Text>
-      <Box overflow="hidden"><Text>{flat}</Text></Box>
+      <Text bold color="cyan">
+        {k.key}{" "}
+      </Text>
+      <Text dimColor>· </Text>
+      <Box overflow="hidden">
+        <Text>{flat}</Text>
+      </Box>
     </Box>
   );
 }
@@ -423,15 +603,20 @@ type ConfirmDeleteProps = {
 
 function ConfirmDelete({ keyName, onConfirm, onCancel }: ConfirmDeleteProps) {
   const { isRawModeSupported } = useStdin();
-  useInput((input) => {
-    if (input === "y" || input === "Y") onConfirm();
-    else onCancel();
-  }, { isActive: isRawModeSupported });
+  useInput(
+    (input) => {
+      if (input === "y" || input === "Y") onConfirm();
+      else onCancel();
+    },
+    { isActive: isRawModeSupported },
+  );
 
   return (
     <Box paddingX={1}>
-      <Text color="red">Delete <Text bold>{keyName}</Text>? </Text>
-      <Text dimColor>y confirm  any other key cancel</Text>
+      <Text color="red">
+        Delete <Text bold>{keyName}</Text>?{" "}
+      </Text>
+      <Text dimColor>y confirm any other key cancel</Text>
     </Box>
   );
 }
@@ -443,19 +628,29 @@ type ConfirmEncryptProps = {
   onCancel: () => void;
 };
 
-function ConfirmEncrypt({ decrypt, fileName, onConfirm, onCancel }: ConfirmEncryptProps) {
+function ConfirmEncrypt({
+  decrypt,
+  fileName,
+  onConfirm,
+  onCancel,
+}: ConfirmEncryptProps) {
   const { isRawModeSupported } = useStdin();
-  useInput((input) => {
-    if (input === "y" || input === "Y") onConfirm();
-    else onCancel();
-  }, { isActive: isRawModeSupported });
+  useInput(
+    (input) => {
+      if (input === "y" || input === "Y") onConfirm();
+      else onCancel();
+    },
+    { isActive: isRawModeSupported },
+  );
 
   const action = decrypt ? "Decrypt" : "Encrypt";
   const color = decrypt ? "yellow" : "green";
   return (
     <Box paddingX={1}>
-      <Text color={color}>{action} <Text bold>{fileName}</Text>? </Text>
-      <Text dimColor>y confirm  any other key cancel</Text>
+      <Text color={color}>
+        {action} <Text bold>{fileName}</Text>?{" "}
+      </Text>
+      <Text dimColor>y confirm any other key cancel</Text>
     </Box>
   );
 }
@@ -467,18 +662,37 @@ type ConfirmAddEncryptProps = {
   onCancel: () => void;
 };
 
-function ConfirmAddEncrypt({ keyName, onEncrypt, onPlain, onCancel }: ConfirmAddEncryptProps) {
+function ConfirmAddEncrypt({
+  keyName,
+  onEncrypt,
+  onPlain,
+  onCancel,
+}: ConfirmAddEncryptProps) {
   const { isRawModeSupported } = useStdin();
-  useInput((input, key) => {
-    if (key.escape) { onCancel(); return; }
-    if (input === "y" || input === "Y") { onEncrypt(); return; }
-    if (input === "n" || input === "N" || key.return) { onPlain(); return; }
-  }, { isActive: isRawModeSupported });
+  useInput(
+    (input, key) => {
+      if (key.escape) {
+        onCancel();
+        return;
+      }
+      if (input === "y" || input === "Y") {
+        onEncrypt();
+        return;
+      }
+      if (input === "n" || input === "N" || key.return) {
+        onPlain();
+        return;
+      }
+    },
+    { isActive: isRawModeSupported },
+  );
 
   return (
     <Box paddingX={1}>
-      <Text>Encrypt <Text bold>{keyName}</Text>? </Text>
-      <Text dimColor>y encrypt  n plain  esc cancel</Text>
+      <Text>
+        Encrypt <Text bold>{keyName}</Text>?{" "}
+      </Text>
+      <Text dimColor>y encrypt n plain esc cancel</Text>
     </Box>
   );
 }

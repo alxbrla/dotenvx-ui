@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, basename, dirname } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import type { EnvFile } from "./types.js";
 
 const SKIP_DIRS = new Set([
@@ -26,7 +26,6 @@ export function detectRoot(cwd: string): string {
   }
   return cwd;
 }
-
 
 export function scanForEnvFiles(root: string): string[] {
   const results: string[] = [];

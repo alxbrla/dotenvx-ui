@@ -1,11 +1,11 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { resolve, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 const cli = resolve(fileURLToPath(import.meta.url), "../../../dist/cli.js");
@@ -49,7 +49,10 @@ test("no env files exits with code 1", async () => {
   }
 });
 
-async function runIn(cwd: string, ...args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+async function runIn(
+  cwd: string,
+  ...args: string[]
+): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
     const r = await exec("node", [cli, ...args], { cwd });
     return { stdout: r.stdout, stderr: r.stderr, code: 0 };

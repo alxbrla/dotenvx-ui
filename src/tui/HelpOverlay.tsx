@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Text, useInput, useStdin } from "ink";
 
 type Props = { onClose: () => void };
@@ -43,14 +42,19 @@ const KEY_WIDTH = 10;
 
 export function HelpOverlay({ onClose }: Props) {
   const { isRawModeSupported } = useStdin();
-  useInput((input, key) => {
-    if (input === "?" || input === "q" || key.escape) onClose();
-  }, { isActive: isRawModeSupported });
+  useInput(
+    (input, key) => {
+      if (input === "?" || input === "q" || key.escape) onClose();
+    },
+    { isActive: isRawModeSupported },
+  );
 
   return (
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       <Box marginBottom={1}>
-        <Text bold color="cyan">dotenvx-ui  </Text>
+        <Text bold color="cyan">
+          dotenvx-ui{" "}
+        </Text>
         <Text dimColor>keyboard shortcuts</Text>
       </Box>
       {SECTIONS.map((section) => (
@@ -65,7 +69,7 @@ export function HelpOverlay({ onClose }: Props) {
         </Box>
       ))}
       <Box marginTop={1}>
-        <Text dimColor>? / q / esc  close help</Text>
+        <Text dimColor>? / q / esc close help</Text>
       </Box>
     </Box>
   );

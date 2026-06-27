@@ -1,10 +1,12 @@
-import React from "react";
+import { createRequire } from "node:module";
 import { render } from "ink";
 import { scan } from "./core/scanner.js";
 import { App } from "./tui/App.js";
 import { ErrorBoundary } from "./tui/ErrorBoundary.js";
-import { createRequire } from "node:module";
-const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
+
+const { version } = createRequire(import.meta.url)("../package.json") as {
+  version: string;
+};
 
 const HELP = `
 dotenvx-ui — terminal and web UI for dotenvx environment files
@@ -19,17 +21,31 @@ Options:
 `;
 
 const commands: Record<string, () => void> = {
-  "--version": () => { console.log(version); process.exit(0); },
-  "-v":        () => { console.log(version); process.exit(0); },
-  "--help":    () => { console.log(HELP); process.exit(0); },
-  "-h":        () => { console.log(HELP); process.exit(0); },
-  "ui":        runWebUI,
+  "--version": () => {
+    console.log(version);
+    process.exit(0);
+  },
+  "-v": () => {
+    console.log(version);
+    process.exit(0);
+  },
+  "--help": () => {
+    console.log(HELP);
+    process.exit(0);
+  },
+  "-h": () => {
+    console.log(HELP);
+    process.exit(0);
+  },
+  ui: runWebUI,
 };
 
 const [, , command] = process.argv;
 
 if (command !== undefined && !(command in commands)) {
-  console.error(`Unknown command: ${command}\nRun dotenvx-ui --help for usage.`);
+  console.error(
+    `Unknown command: ${command}\nRun dotenvx-ui --help for usage.`,
+  );
   process.exit(1);
 }
 
@@ -41,7 +57,12 @@ function runTUI() {
     console.error("No .env files found in this directory.");
     process.exit(1);
   }
-  render(<ErrorBoundary><App files={files} /></ErrorBoundary>, { alternateScreen: true });
+  render(
+    <ErrorBoundary>
+      <App files={files} />
+    </ErrorBoundary>,
+    { alternateScreen: true },
+  );
 }
 
 async function runWebUI() {

@@ -15,3 +15,6 @@ node_modules/
 # Temp
 *.log
 /tmp/
+
+# Coverage
+coverage/

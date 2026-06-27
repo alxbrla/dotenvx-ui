@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useStdout } from "ink";
+import { useEffect, useState } from "react";
 
 // Tracks the terminal height (in rows), updating on resize.
 export function useTerminalRows(): number {
@@ -37,16 +37,21 @@ export function useTerminalCols(): number {
 
 // Computes the slice of a list to render so `selectedIndex` stays visible
 // inside a viewport of `maxVisible` rows.
-export function scrollWindow(length: number, selectedIndex: number, maxVisible: number): {
+export function scrollWindow(
+  length: number,
+  selectedIndex: number,
+  maxVisible: number,
+): {
   start: number;
   end: number;
   above: number;
   below: number;
 } {
-  if (length <= maxVisible) return { start: 0, end: length, above: 0, below: 0 };
+  if (length <= maxVisible)
+    return { start: 0, end: length, above: 0, below: 0 };
   const start = Math.min(
     Math.max(0, selectedIndex - Math.floor(maxVisible / 2)),
-    length - maxVisible
+    length - maxVisible,
   );
   const end = start + maxVisible;
   return { start, end, above: start, below: length - end };
