@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync, renameSync } from "node:fs";
-import { join, dirname } from "node:path";
 import { randomBytes } from "node:crypto";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { EnvKey } from "../types.js";
 import { isEncryptedValue, parseValue, serializeKeyValue } from "./values.js";
 
@@ -41,7 +41,9 @@ export function writeEnvFile(filePath: string, keys: EnvKey[]): void {
 
     if (update.value === entry.value) {
       // Value unchanged — emit the original raw line to preserve quoting/formatting
-      const keyLines = entry.lines.filter((l) => !l.trimStart().startsWith("#"));
+      const keyLines = entry.lines.filter(
+        (l) => !l.trimStart().startsWith("#"),
+      );
       outLines.push(...keyLines);
     } else {
       outLines.push(serializeKeyValue(entry.key, update.value));
@@ -124,7 +126,12 @@ function parse(content: string): Entry[] {
     const rawValue = line.slice(eqIdx + 1);
     const { value, extraLines } = parseValue(rawValue, lines, i + 1);
 
-    entries.push({ type: "key", key, value, lines: [...pendingComments, line, ...extraLines] });
+    entries.push({
+      type: "key",
+      key,
+      value,
+      lines: [...pendingComments, line, ...extraLines],
+    });
     pendingComments = [];
     i += 1 + extraLines.length;
   }
@@ -144,7 +151,7 @@ function getLeadingCommentLines(lines: string[]): string[] {
 
 function extractLeadingComment(lines: string[]): string | undefined {
   const comments = getLeadingCommentLines(lines).map((l) =>
-    l.trimStart().slice(1).trim()
+    l.trimStart().slice(1).trim(),
   );
   return comments.length > 0 ? comments.join("\n") : undefined;
 }
@@ -152,13 +159,15 @@ function extractLeadingComment(lines: string[]): string | undefined {
 function atomicWrite(filePath: string, content: string): void {
   const tmp = join(
     dirname(filePath),
-    `.dotenvx-ui-tmp-${randomBytes(6).toString("hex")}`
+    `.dotenvx-ui-tmp-${randomBytes(6).toString("hex")}`,
   );
   try {
     writeFileSync(tmp, content, { encoding: "utf8", flag: "wx" });
     renameSync(tmp, filePath);
   } catch (err) {
-    try { writeFileSync(tmp, ""); } catch {}
+    try {
+      writeFileSync(tmp, "");
+    } catch {}
     throw new Error(`Failed to write ${filePath}: ${(err as Error).message}`);
   }
 }

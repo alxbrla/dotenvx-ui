@@ -1,4 +1,3 @@
-import React from "react";
 import type { EnvFile } from "./types.js";
 
 type Props = {
@@ -14,7 +13,9 @@ export function FileList({ files, selectedPath, onSelect }: Props) {
     <aside className="w-55 shrink-0 border-r border-[#2A2A2E] bg-[#141416] overflow-y-auto py-2">
       {groups.map(([pkg, pkgFiles]) => (
         <div key={pkg} className="mb-1">
-          <div className="px-3 py-1.5 text-[11px] font-medium text-[#52525C] truncate">{pkg}</div>
+          <div className="px-3 py-1.5 text-[11px] font-medium text-[#52525C] truncate">
+            {pkg}
+          </div>
           {pkgFiles.map((f) => {
             const active = f.path === selectedPath;
             return (

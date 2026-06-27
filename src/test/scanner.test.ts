@@ -1,13 +1,13 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
 import {
   detectRoot,
-  scanForEnvFiles,
   parseEnvironmentFromFilename,
   scan,
+  scanForEnvFiles,
 } from "../core/scanner.js";
 
 function fixture(): string {
@@ -149,7 +149,7 @@ test("scan: returns EnvFile array with correct metadata", () => {
     writeFileSync(join(dir, ".env"), "FOO=bar\nBAR=baz");
     writeFileSync(
       join(dir, ".env.local"),
-      "DOTENV_PUBLIC_KEY=abc\nSECRET=encrypted:xyz"
+      "DOTENV_PUBLIC_KEY=abc\nSECRET=encrypted:xyz",
     );
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "app" }));
 

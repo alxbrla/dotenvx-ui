@@ -5,7 +5,7 @@ export function isEncryptedValue(value: string): boolean {
 export function parseValue(
   rawValue: string,
   allLines: string[],
-  nextLineIdx: number
+  nextLineIdx: number,
 ): { value: string; extraLines: string[] } {
   const trimmed = rawValue.trim();
 
@@ -31,7 +31,10 @@ export function parseValue(
       valueLines.push(continuation);
       idx++;
     }
-    return { value: valueLines.join("\n"), extraLines: allLines.slice(nextLineIdx, idx) };
+    return {
+      value: valueLines.join("\n"),
+      extraLines: allLines.slice(nextLineIdx, idx),
+    };
   }
 
   if (trimmed.startsWith("'")) {
@@ -68,12 +71,16 @@ export function serializeKeyValue(key: string, value: string): string {
 // Finds the index of the first unescaped closing double-quote in s
 function findClosingQuote(s: string): number {
   for (let i = 0; i < s.length; i++) {
-    if (s[i] === "\\") { i++; continue; }
+    if (s[i] === "\\") {
+      i++;
+      continue;
+    }
     if (s[i] === '"') return i;
   }
   return -1;
 }
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: local helper, not overriding global
 function unescape(s: string): string {
   return s
     .replace(/\\n/g, "\n")
