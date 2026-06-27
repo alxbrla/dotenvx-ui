@@ -1,6 +1,6 @@
 {
   "name": "dotenvx-ui",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Terminal and web UI for managing dotenvx environment files",
   "author": "Alexandru Burla <alexandru.burla@gmail.com>",
   "license": "MIT",
