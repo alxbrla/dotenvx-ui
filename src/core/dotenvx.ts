@@ -186,8 +186,13 @@ function findKeyForValue(encryptedValue: string, envFilePath: string): string | 
   for (const line of raw.split("\n")) {
     const eqIdx = line.indexOf("=");
     if (eqIdx === -1) continue;
-    const lineValue = line.slice(eqIdx + 1).trim();
-    if (lineValue === encryptedValue) return line.slice(0, eqIdx).trim();
+    const keyName = line.slice(0, eqIdx).trim();
+    const rawVal = line.slice(eqIdx + 1).trim();
+    // strip surrounding double-quotes (dotenvx stores encrypted values quoted)
+    const unquoted = rawVal.startsWith('"') && rawVal.endsWith('"')
+      ? rawVal.slice(1, -1)
+      : rawVal;
+    if (unquoted === encryptedValue || rawVal === encryptedValue) return keyName;
   }
   return null;
 }

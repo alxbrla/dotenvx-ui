@@ -410,7 +410,7 @@ function ValuePreview({ keys, keyIndex, focus, revealed, width }: {
     >
       <Text bold color="cyan">{k.key}  </Text>
       <Text dimColor>·  </Text>
-      <Text truncate>{flat}</Text>
+      <Box overflow="hidden"><Text>{flat}</Text></Box>
     </Box>
   );
 }

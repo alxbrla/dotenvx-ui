@@ -44,7 +44,12 @@ function runTUI() {
   render(<ErrorBoundary><App files={files} /></ErrorBoundary>, { alternateScreen: true });
 }
 
-function runWebUI() {
-  console.log("Web UI — coming soon");
-  process.exit(0);
+async function runWebUI() {
+  const { startServer } = await import("./ui/server.js");
+  const files = scan(process.cwd());
+  if (files.length === 0) {
+    console.error("No .env files found in this directory.");
+    process.exit(1);
+  }
+  await startServer(process.cwd());
 }
